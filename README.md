@@ -1,1 +1,0 @@
-Tools for converting boto3 response JOSN to terraform format
