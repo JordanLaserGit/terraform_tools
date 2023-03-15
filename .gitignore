@@ -1,1 +1,4 @@
-./data/*
+/data
+/python/__pycache__/*
+describe.txt
+functions.txt
