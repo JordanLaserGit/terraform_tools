@@ -14,16 +14,16 @@ class Converter():
         self.convert_vpc()
         self.convert_instance()
         # self.convert_subnet()
+        pass
 
     def init_block(self):
         profile = "default"
-        region  = "us-east-1"
+        region  = self.Response.region
         init_block_str  = f'provider "aws" {{\n'
         init_block_str += f'profile = {profile}\n'
-        init_block_str += f'region  = {profile}\n'
+        init_block_str += f'region  = {region}\n'
 
         self.blocks.append(init_block_str)
-
 
     def convert_vpc(self):
 
@@ -56,7 +56,7 @@ class Converter():
             self.blocks.append(vpc_string)
                  
     def convert_instance(self):
-        for jvpc in self.Response.ec2_responses['instances']:
+        for jinst in self.Response.ec2_responses['instances']['Reservations']:
              # Find instance name
             tags = self.Response.ec2_responses['tags']['image']
             for jtag in tags:
@@ -120,9 +120,12 @@ def main():
     if len(sys.argv) > 1:
         raise NotImplemented
     else:
+        # Generate boto3 responses from image
         response = Boto3Response()
+        response.ami = 'ami-005f9685cb30f234b'
         response.gen_all_responses()
 
+        # Convert responses to terraform config file
         converter = Converter(response)
         converter.tf_file = '/home/jlaser/code/terraform_tools/data/dev_file.tf'
         converter.convert()
