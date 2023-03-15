@@ -8,12 +8,21 @@ class Converter():
         self.tf_file  = ''
         self.blocks   = [] 
 
-        
     def convert(self):
 
+        self.init_block()
         self.convert_vpc()
         self.convert_instance()
         # self.convert_subnet()
+
+    def init_block(self):
+        profile = "default"
+        region  = "us-east-1"
+        init_block_str  = f'provider "aws" {{\n'
+        init_block_str += f'profile = {profile}\n'
+        init_block_str += f'region  = {profile}\n'
+
+        self.blocks.append(init_block_str)
 
 
     def convert_vpc(self):
@@ -47,7 +56,33 @@ class Converter():
             self.blocks.append(vpc_string)
                  
     def convert_instance(self):
-        pass
+        for jvpc in self.Response.ec2_responses['instances']:
+             # Find instance name
+            tags = self.Response.ec2_responses['tags']['image']
+            for jtag in tags:
+                if jtag['Key'] == 'Name':
+                    name = jtag['Value']
+                    break
+                     
+            cidr_block       = jvpc['CidrBlock']
+            instance_tenancy = jvpc['InstanceTenancy']
+
+            vpc_string = f'resource \"aws_vpc\" \"{name}\" {{ \n'
+
+            vpc_string += f'  cidr_block       = \"{cidr_block}\"\n'
+            vpc_string += f'  instance_tenancy = \"{instance_tenancy}\"\n\n'
+
+            vpc_string += f'  tags = {{\n'
+            for ktag in tags:
+                key = ktag['Key']
+                val = ktag['Value']
+                vpc_string += f'    {key} = \"{val}\"\n'
+
+            vpc_string += '  '
+            vpc_string += f'}}\n '
+            vpc_string += f'}}\n\n'
+
+            self.blocks.append(vpc_string)
 
     def convert_subnet(self):
         pass
@@ -86,7 +121,7 @@ def main():
         raise NotImplemented
     else:
         response = Boto3Response()
-        response.gen_vpc_response()
+        response.gen_all_responses()
 
         converter = Converter(response)
         converter.tf_file = '/home/jlaser/code/terraform_tools/data/dev_file.tf'
