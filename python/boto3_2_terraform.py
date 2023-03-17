@@ -1,43 +1,7 @@
 import  sys, pickle
 from boto3_response import *
-from terraform_tools.python.terra_blocks import AWSVPC
-from terraform_tools.python.terraform_file import TerraformFile
-
-# class Converter():
-
-#     def __init__(self,Boto3_Response):
-#         self.Response = Boto3_Response
-#         self.tf_file  = ''
-#         self.blocks   = [] 
-
-#     def convert(self):
-
-#         self.init_block()
-#         self.convert_vpc()
-
-#         # TODO: will need to detect if there is a aws_launch_template field
-#         # and switch to a convert function to handle that block
-#         self.convert_instance()
-#         # self.convert_subnet()
-#         pass
-
-#     def pascal2snake(self,pascal_dict):
-#         """
-#         Convert variable name case convention
-#         """
-#         snake_dict = dict()
-#         for var in pascal_dict:
-#             res = [var[0].lower()]
-#             for c in var[1:]:
-#                 if c in ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
-#                     res.append('_')
-#                     res.append(c.lower())
-#                 else:
-#                     res.append(c)
-#             snake_dict[''.join(res)] = pascal_dict[var]
-
-#         return snake_dict
-
+from terra_blocks import ProviderBlock, ResourceBlock
+from terraform_file import TerraformFile
 
 def main():
 
@@ -72,17 +36,27 @@ def main():
         # of the block strings to file and then validate against the existing infrastructure
 
         ii_provider = True
+        ii_vpc      = len(boto3_response.ec2_responses['vpcs']['Vpcs']) > 0
+
+        
         if ii_provider:
             PB = ProviderBlock(boto3_response)
             TF.Blocks.append(PB)
 
-        ii_vpc = len(boto3_response.ec2_responses['vpcs']['Vpcs']) > 0
+        
         if ii_vpc:
-            for jvpc in boto3_response.ec2_responses['vpcs']['Vpcs']:
-                tags = boto3_response.ec2_responses['tags']['image']
-                VPC = AWSVPC(jvpc,tags)
-                VPC.include_attrs()
-                TF.Blocks.append(VPC.Block)
+            for jvpc in range(len(boto3_response.ec2_responses['vpcs']['Vpcs'])): 
+
+                # Maybe this response packaging should be done in boto3_response?
+                vpc_response = {}
+                vpc_response['vpc']                          = boto3_response.ec2_responses['vpcs']['Vpcs'][jvpc]
+                vpc_response['vpc_classic_link']             = boto3_response.ec2_responses['vpc_classic_link']['Vpcs'][jvpc]
+                vpc_response['vpc_classic_link_dns_support'] = boto3_response.ec2_responses['vpc_classic_link_dns_support']['Vpcs'][jvpc]
+                vpc_response['ipv6_pools']                   = boto3_response.ec2_responses['ipv6_pools']['Ipv6Pools']
+                # vpc_response['vpc']                          = boto3_response.ec2_responses['vpcs']['Vpcs'][jvpc]
+                vpc_response['tags'] = boto3_response.ec2_responses['tags']['image']
+                VPC = ResourceBlock('aws_vpc',vpc_response)
+                TF.Blocks.append(VPC)
 
         # TODO: Do all the other blocks
 
