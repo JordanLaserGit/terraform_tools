@@ -1,5 +1,3 @@
-from boto3_response import *
-
 class ProviderBlock():
 
     def __init__(self,Response):
