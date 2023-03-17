@@ -33,16 +33,22 @@ class TerraformFile():
         return file_string
 
     def write(self):
+        """
+        Creates terraform file string and writes it to file
+        """
 
         file_string = ''
         for jBlk in self.Blocks:
             file_string += self.create_block_string(jBlk)
-            file_string += f'}}\n'
+            file_string += f'}}\n\n'
 
         with open(self.file,'w') as f:
             f.write(file_string)  
 
     def validate(self):
+        """
+        Validates that the automated terraform file builds the existing architecture
+        """
 
         # cd into where terraform is output
         dir = os.path.dirname(os.path.realpath(self.file))
