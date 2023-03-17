@@ -9,22 +9,22 @@ def main():
         raise NotImplemented
     else:
         # # Generate boto3 responses from image
+        response = Boto3Response()
+        response.ami = 'ami-005f9685cb30f234b'
+        response.gen_all_responses()
+        response.tag_split()
+        with open('/home/jlaser/code/terraform_tools/AWS_response.obj','wb') as f:
+            pickle.dump(response.ec2_responses,f)
+
+        # # Read response dictionary from file and refill class
         # response = Boto3Response()
         # response.ami = 'ami-005f9685cb30f234b'
-        # response.gen_all_responses()
-        # response.tag_split()
-        # with open('/home/jlaser/code/terraform_tools/AWS_response.obj','wb') as f:
-        #     pickle.dump(response.ec2_responses,f)
+        # with open('/home/jlaser/code/terraform_tools/AWS_response.obj','rb') as f:
+        #     response = pickle.load(f)
 
-        # Read response dictionary from file and refill class
-        response_new = Boto3Response()
-        response_new.ami = 'ami-005f9685cb30f234b'
-        with open('/home/jlaser/code/terraform_tools/AWS_response.obj','rb') as f:
-            new_thing = pickle.load(f)
+        # response.ec2_responses = response
 
-        response_new.ec2_responses = new_thing
-
-        boto3_response = response_new
+        boto3_response = response
 
         # Convert responses to terraform config file
         TF = TerraformFile()
@@ -49,12 +49,10 @@ def main():
 
                 # Maybe this response packaging should be done in boto3_response?
                 vpc_response = {}
-                vpc_response['vpc']                          = boto3_response.ec2_responses['vpcs']['Vpcs'][jvpc]
-                vpc_response['vpc_classic_link']             = boto3_response.ec2_responses['vpc_classic_link']['Vpcs'][jvpc]
-                vpc_response['vpc_classic_link_dns_support'] = boto3_response.ec2_responses['vpc_classic_link_dns_support']['Vpcs'][jvpc]
-                vpc_response['ipv6_pools']                   = boto3_response.ec2_responses['ipv6_pools']['Ipv6Pools']
-                # vpc_response['vpc']                          = boto3_response.ec2_responses['vpcs']['Vpcs'][jvpc]
-                vpc_response['tags'] = boto3_response.ec2_responses['tags']['image']
+                vpc_response['vpc']                              = boto3_response.ec2_responses['vpcs']['Vpcs'][jvpc]
+                vpc_response['enableDnsSupport']                 = boto3_response.ec2_responses['enableDnsSupport'][jvpc]
+                vpc_response['enableDnsHostnamespc']             = boto3_response.ec2_responses['enableDnsHostnames'][jvpc]
+                vpc_response['enableNetworkAddressUsageMetrics'] = boto3_response.ec2_responses['enableNetworkAddressUsageMetrics'][jvpc]
                 VPC = ResourceBlock('aws_vpc',vpc_response)
                 TF.Blocks.append(VPC)
 
