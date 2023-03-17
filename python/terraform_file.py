@@ -15,8 +15,8 @@ class TerraformFile():
         for jBlk in self.Blocks:
             depth = 0
             file_string += jBlk.block_str
-            for key in jBlk.attrs:  
-                val = jBlk.attrs[key]        
+            for key in jBlk.args:  
+                val = jBlk.args[key]        
 
                 if type(val) is not dict:
                     if val is True:  val = "true"
