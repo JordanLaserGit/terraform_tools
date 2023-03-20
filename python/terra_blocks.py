@@ -11,14 +11,19 @@ class ProviderBlock():
 
 class ResourceBlock():
 
-    def __init__(self, resource, Response):
-
-        self.block_str   = f'resource \"{resource}\" \"stevie_ray\" {{ \n'
+    def __init__(self, resource, Response):        
     
         if resource == 'aws_vpc':
             self.args = get_aws_vpc_mapping(Response)
         else:
             raise Exception(f'{resource} is not within the built responses. Perhaps contact Jordan and ask him to build it.')
+        
+        try:
+            name = self.args['tags']['Name']
+        except:
+            raise Exception('Resource needs \'Name\' as a tag')
+
+        self.block_str   = f'resource \"{resource}\" \"{name}\" {{ \n'
 
 ############
 # mapping #
@@ -105,7 +110,11 @@ def get_aws_vpc_mapping(response):
     if ii_enable_network_address_usage_metrics:
         mapping['enable_network_address_usage_metrics'] = 'true'                                        
     if ii_tags:
-        mapping['tags']                                 = response['vpc']['Tags'][0] # Not sure why this is a list
+        tags = response['vpc']['Tags']
+        tags_out = {}
+        for jtag in tags:
+            tags_out[jtag['Key']] = jtag['Value']
+        mapping['tags']                                 = tags_out # Not sure why this is a list
 
     return mapping
 
