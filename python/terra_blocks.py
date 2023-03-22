@@ -108,7 +108,9 @@ def get_aws_vpc_mapping(response):
     if ii_assign_generated_ipv6_cidr_block:
         mapping['assign_generated_ipv6_cidr_block']     = init_val        
     if ii_enable_network_address_usage_metrics:
-        mapping['enable_network_address_usage_metrics'] = 'true'                                        
+        print(f'Be wary! enable_network_address_usage_metrics is hard coded to false due to boto3 response bug.') 
+        # mapping['enable_network_address_usage_metrics'] = response['enableNetworkAddressUsageMetrics']['EnableNetworkAddressUsageMetrics']['Value']                                       
+        mapping['enable_network_address_usage_metrics'] = 'false'                                    
     if ii_tags:
         tags = response['vpc']['Tags']
         tags_out = {}
