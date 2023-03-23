@@ -1,10 +1,12 @@
-import os, subprocess
+import os, subprocess, re
 
 class TerraformFile():
 
     def __init__(self):
+        self.path        = ''
+        self.file_str    = ''
         self.config_file = ''
-        self.Blocks   = [] 
+        self.Blocks      = [] 
 
     def create_block_string(self,jBlk,depth=0):
         """
@@ -62,8 +64,95 @@ class TerraformFile():
             f.write(file_string)   
 
     def state2config(self):
-        pass
 
+        # Terraform show to help build the config
+        process = subprocess.Popen(["terraform","show"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = process.communicate()
+        tf_str = out.decode()
+        escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+        tf_str = escape.sub('',tf_str)
+
+        show = os.path.join(self.path,'tf_show.txt')
+
+        with open(show,'w') as f:
+            f.write(tf_str)
+
+        with open(show,'r') as f:
+            tf_lines = f.readlines()
+
+        # Now that we have the tf show output, remove attributes that aws will decide on
+
+        # Need to add: 
+        vpc_attrs = [
+            'cidr_block',
+            'instance_tenancy',
+            'enable_dns_support',
+            'enable_dns_hostnames',
+            'enable_network_address_usage_metrics',
+            'tags',
+            'ipv6_cidr_block',
+            'assign_generated_ipv6_cidr_block',
+            'ipv4_ipam_pool_id',
+            'ipv4_netmask_length'
+            ]
+        
+        subnet_attrs = [
+            'availability_zone',
+            'map_public_ip_on_launch',
+            'cidr_block',
+            'default_for_az',
+            'filter',
+            'ipv6_cidr_block',
+            'state',
+            'tags',
+            'vpc_id'
+            ]        
+        
+        out = ''
+        ii_tags = False
+        for line in tf_lines:
+            # Include line
+            if ii_tags: 
+                if line .find('}') > 0:
+                    ii_tags = False                    
+                out += line
+                continue
+            if line == '\n' or line == '}\n':
+                out += line
+                pass
+            if line.find('resource ') >= 0:
+                split = line.split('\"')
+                resource_type = split[1]
+                resource_name = split[3]
+                if resource_type == 'aws_vpc':
+                    attrs = vpc_attrs
+                elif resource_type == 'aws_subnet':
+                    attrs = subnet_attrs
+                out += line
+                pass   
+
+            # Exclude line         
+            if line.find('#') >= 0:
+                continue
+
+            split = line.split('=')
+            if split[0].strip() in attrs:
+                if split[0].strip() == 'tags': 
+                    ii_tags = True
+                if line.find('vpc_id') >= 0 and resource_type != 'aws_vpc': # replace with reference
+                    out += split[0] + f'= aws_vpc.vpc0.id\n' #TODO unhard code this
+                else:
+                    out += line
+
+        self.file_str += out  
+        self.write_file_str()  
+
+    def write_file_str(self):
+        """
+        Write the string created in state2config()
+        """
+        with open(self.config_file,'w') as f:
+            f.write(self.file_str)  
 
     def validate(self):
         """

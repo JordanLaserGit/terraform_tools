@@ -1,4 +1,4 @@
-import  sys, pickle, os, subprocess
+import  sys, pickle, os, subprocess, re
 import numpy as np
 from boto3_response import *
 from terra_blocks import ProviderBlock, ResourceBlock
@@ -84,9 +84,10 @@ def main():
                       "SubnetId":"subnet"
                     }        
 
-            # Create basic config file that will be used to import the resources
+        # Create basic config file that will be used to import the resources
         TF = TerraformFile()
         TF.config_file = '/home/jlaser/code/terraform_tools/data/dev_file.tf'
+        TF.path = '/home/jlaser/code/terraform_tools/data/'
         PB = ProviderBlock(response)
         TF.Blocks.append(PB)
         TF.write()
@@ -109,8 +110,7 @@ def main():
                 SUB = ResourceBlock('aws_subnet',{},local_name)   
                 TF.Blocks.append(SUB)     
 
-        TF.append_file()       
-                     
+        TF.append_file()                            
                     
         # Now that we have all the resources, lets import them        
         for j in range(nrecs):
@@ -121,19 +121,10 @@ def main():
             print(f'Importing Terraform resource {jrec}...')
             subprocess.run(["terraform","import",f"aws_{resource_type}.{local_name}",f"{jid}"])
 
-        process = subprocess.Popen(["terraform","show"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = process.communicate()
-        tf_str = out.decode() 
-
-        with open(f'/home/jlaser/code/terraform_tools/data/tf_show.txt','w') as f:
-            f.write(tf_str)
-
-        with open(f'/home/jlaser/code/terraform_tools/data/tf_show.txt','r') as f:
-            tf_lines = f.readlines()
-
-
-        TF.state2config()                
-
+        TF.file_str = PB.block_str + '}\n'
+        TF.state2config()  
+        TF.validate()
+                      
     elif mode == 'clone':    
         # # Generate boto3 responses from image
         response = Boto3Response()
