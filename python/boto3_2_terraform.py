@@ -57,6 +57,7 @@ def get_resources(response):
 
 def main():
     mode = sys.argv[1]
+    wdir = sys.argv[2]
 
     if mode == 'deconstruct':
         """
@@ -75,7 +76,6 @@ def main():
         response = Boto3Response()
         response.ami = 'ami-005f9685cb30f234b'
         response.gen_all_responses()
-        response.tag_split()
 
         # Obtain list of all resources and their IDs
         uni_recs, uni_ids = get_resources(response.ec2_responses)
@@ -86,8 +86,8 @@ def main():
 
         # Create basic config file that will be used to import the resources
         TF = TerraformFile()
-        TF.config_file = '/home/jlaser/code/terraform_tools/data/dev_file.tf'
-        TF.path = '/home/jlaser/code/terraform_tools/data/'
+        TF.set_wdir(wdir)
+        TF.config_file = os.path.join(wdir,'dev_file.tf')
         PB = ProviderBlock(response)
         TF.Blocks.append(PB)
         TF.write()
@@ -206,4 +206,4 @@ def main():
         raise Exception(f'Mode {mode} has not yet been implemented')
 
 if __name__ == '__main__':
-    main(),
+    main()

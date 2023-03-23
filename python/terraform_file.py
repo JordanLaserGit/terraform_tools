@@ -3,11 +3,16 @@ import os, subprocess, re
 class TerraformFile():
 
     def __init__(self):
-        self.path        = ''
+        self.terra_dir  = ''
         self.file_str    = ''
         self.config_file = ''
-        self.Blocks      = [] 
+        self.Blocks      = []  
 
+    def set_wdir(self,terra_dir):
+        if not os.path.exists(terra_dir):
+            os.mkdir(terra_dir) 
+        self.terra_dir = terra_dir
+      
     def create_block_string(self,jBlk,depth=0):
         """
         Add dictionary to block string line by line
@@ -63,7 +68,10 @@ class TerraformFile():
         with open(self.config_file,'a') as f:
             f.write(file_string)   
 
-    def state2config(self):
+    def show2config(self):
+        """
+        Convert terraform show output into terraform config
+        """
 
         # Terraform show to help build the config
         process = subprocess.Popen(["terraform","show"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -72,15 +80,13 @@ class TerraformFile():
         escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
         tf_str = escape.sub('',tf_str)
 
-        show = os.path.join(self.path,'tf_show.txt')
+        show = os.path.join(self.terra_dir,'tf_show.txt')
 
         with open(show,'w') as f:
             f.write(tf_str)
 
         with open(show,'r') as f:
             tf_lines = f.readlines()
-
-        # Now that we have the tf show output, remove attributes that aws will decide on
 
         # Need to add: 
         vpc_attrs = [
@@ -108,9 +114,18 @@ class TerraformFile():
             'vpc_id'
             ]        
         
+        # Create the string that will be written to file
+        # Algorithm is to 
+        # 1) copy paste the show output 
+        # 2) remove fields we don't want 
+        # 3) make variable references where appropriate
         out = ''
         ii_tags = False
         for line in tf_lines:
+            # Exclude line         
+            if line.find('#') >= 0:
+                continue
+
             # Include line
             if ii_tags: 
                 if line .find('}') > 0:
@@ -129,14 +144,10 @@ class TerraformFile():
                 elif resource_type == 'aws_subnet':
                     attrs = subnet_attrs
                 out += line
-                pass   
-
-            # Exclude line         
-            if line.find('#') >= 0:
-                continue
+                pass               
 
             split = line.split('=')
-            if split[0].strip() in attrs:
+            if split[0].strip() in attrs: # include only if in attrs
                 if split[0].strip() == 'tags': 
                     ii_tags = True
                 if line.find('vpc_id') >= 0 and resource_type != 'aws_vpc': # replace with reference
