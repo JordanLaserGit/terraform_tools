@@ -460,10 +460,10 @@ class Boto3Response():
         #     self.ec2_responses['store_image_tasks']                                                = self.ec2.describe_store_image_tasks()
         # except:
         #     failed.append('describe_store_image_tasks')
-        # try:
-        #     self.ec2_responses['subnets']                                                          = self.ec2.describe_subnets()
-        # except:
-        #     failed.append('describe_subnets')
+        try:
+            self.ec2_responses['subnets']                                                          = self.ec2.describe_subnets()
+        except:
+            failed.append('describe_subnets')
         try:
             self.ec2_responses['tags']                                                             = self.ec2.describe_tags()
         except:

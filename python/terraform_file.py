@@ -3,7 +3,7 @@ import os, subprocess
 class TerraformFile():
 
     def __init__(self):
-        self.file  = ''
+        self.config_file = ''
         self.Blocks   = [] 
 
     def create_block_string(self,jBlk,depth=0):
@@ -21,8 +21,11 @@ class TerraformFile():
 
             if type(val) is not dict:
                 if val is True:  val = "true"
-                if val is False: val = "false"                    
-                file_string += f'{key}       = \"{val}\"\n'.rjust(2,' ')
+                if val is False: val = "false"  
+                if val[:3] == 'VAR': # code to recognize when val is a terraform variable reference
+                    file_string += f'{key}       = {val[3:]}\n'.rjust(2,' ')
+                else:
+                    file_string += f'{key}       = \"{val}\"\n'.rjust(2,' ')
             else:
                 depth += 1
                 file_string += f'{key}       = {{\n'.rjust(2,' ')
@@ -42,8 +45,25 @@ class TerraformFile():
             file_string += self.create_block_string(jBlk)
             file_string += f'}}\n\n'
 
-        with open(self.file,'w') as f:
+        with open(self.config_file,'w') as f:
             f.write(file_string)  
+
+    def append_file(self):
+        """
+        Creates terraform file string and appends it to file
+        """
+
+        file_string = ''
+        for jBlk in self.Blocks:
+            file_string += self.create_block_string(jBlk)
+            file_string += f'}}\n\n'
+
+        with open(self.config_file,'a') as f:
+            f.write(file_string)   
+
+    def state2config(self):
+        pass
+
 
     def validate(self):
         """
@@ -51,7 +71,7 @@ class TerraformFile():
         """
 
         # cd into where terraform is output
-        dir = os.path.dirname(os.path.realpath(self.file))
+        dir = os.path.dirname(os.path.realpath(self.config_file))
         os.chdir(dir) 
 
         # terraform init 
