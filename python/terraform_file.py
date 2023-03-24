@@ -112,7 +112,60 @@ class TerraformFile():
             'state',
             'tags',
             'vpc_id'
-            ]        
+            ]       
+         
+        instance_attrs = [
+            'ami',
+            'associate_public_ip_address',
+            'availability_zone',
+            'capacity_reservation_specification',
+            'cpu_core_count',
+            'cpu_threads_per_core',
+            'credit_specification',
+            'disable_api_stop',
+            'disable_api_termination',
+            'ebs_block_device',
+            'ebs_optimized',
+            'enclave_options',
+            'ephemeral_block_device',
+            'get_password_data',
+            'hibernation',
+            'host_id',
+            'host_resource_group_arn',
+            'iam_instance_profile',
+            'instance_initiated_shutdown_behavior',
+            'instance_type',
+            'key_name',
+            'launch_template',
+            'maintenance_options',
+            'metadata_options',
+            'monitoring',
+            'network_interface',
+            'placement_group',
+            'placement_partition_number',
+            'private_dns_name_options',
+            'private_ip',
+            'secondary_private_ips',
+            'security_groups',
+            'subnet_id',
+            'tags',
+            'tenancy',
+            'vpc_security_group_ids'
+            ]  
+
+        # Only add if ipv6_address_count > 0
+        if False:
+            instance_attrs.append('ipv6_address_count','ipv6_addresses')
+
+        # List of attributes that are contexts (braced attributes)
+        contexts = ['capacity_reservation_specification',
+                    'credit_specification',
+                    'enclave_options',
+                    'maintenance_options',
+                    'metadata_options',
+                    'private_dns_name_options',
+                    'tags'
+                    ]       
         
         # Create the string that will be written to file
         # Algorithm is to 
@@ -120,21 +173,45 @@ class TerraformFile():
         # 2) remove fields we don't want 
         # 3) make variable references where appropriate
         out = ''
-        ii_tags = False
-        for line in tf_lines:
+        ii_context = False
+        ii_list    = False
+        ii_skip    = False
+        for j in range(len(tf_lines)):
+            line = tf_lines[j]
+
+            ii_contains_pound            = line.find('#') >= 0
+            ii_contains_only_right_brace = line.find('}\n') >= 0 and not line.find('{}') >= 0
+            ii_contains_only_left_brace  = line.find('{\n') >= 0 and not line.find('{}') >= 0
+            ii_contains_right_bracket    = line.find(']\n') >= 0
+            ii_lineskip_close_context    = line == '\n' or line == '}\n'
+
             # Exclude line         
-            if line.find('#') >= 0:
+            if ii_contains_pound:
                 continue
 
             # Include line
-            if ii_tags: 
-                if line .find('}') > 0:
-                    ii_tags = False                    
+            if ii_context: 
+                if not ii_skip:
+                    out += line
+                if ii_contains_only_right_brace:
+                    ii_context = False  
+                    ii_skip    = False                  
+                continue
+
+            if ii_list:
+                if ii_contains_right_bracket:
+                    ii_list = False  
                 out += line
                 continue
-            if line == '\n' or line == '}\n':
+
+            if ii_skip:
+                continue
+
+            if ii_lineskip_close_context:
                 out += line
-                pass
+                continue
+            
+            # New resource, set attrs and add line
             if line.find('resource ') >= 0:
                 split = line.split('\"')
                 resource_type = split[1]
@@ -143,24 +220,34 @@ class TerraformFile():
                     attrs = vpc_attrs
                 elif resource_type == 'aws_subnet':
                     attrs = subnet_attrs
+                elif resource_type == 'aws_instance':
+                    attrs = instance_attrs                    
                 out += line
-                pass               
+                continue               
 
-            split = line.split('=')
-            if split[0].strip() in attrs: # include only if in attrs
-                if split[0].strip() == 'tags': 
-                    ii_tags = True
+            # Within the resource. Decide to include attr
+            split_eq = line.split('=')
+            split_brac = line.split('{')
+            if ii_contains_only_left_brace:
+                ii_context = True
+                if  not (split_eq[0].strip() in contexts or split_brac[0].strip() in contexts): 
+                        ii_skip = True                  
+
+            if split_eq[0].strip() in attrs or split_brac[0].strip() in attrs: # include only if in attrs                
+                if line.find('= [\n') >= 0:
+                    ii_list = True
                 if line.find('vpc_id') >= 0 and resource_type != 'aws_vpc': # replace with reference
-                    out += split[0] + f'= aws_vpc.vpc0.id\n' #TODO unhard code this
+                    out += split_eq[0] + f'= aws_vpc.vpc0.id\n' #TODO unhard code this
                 else:
                     out += line
+                
 
         self.file_str += out  
         self.write_file_str()  
 
     def write_file_str(self):
         """
-        Write the string created in state2config()
+        Write the string created in show2config()
         """
         with open(self.config_file,'w') as f:
             f.write(self.file_str)  

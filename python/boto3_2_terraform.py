@@ -6,8 +6,18 @@ from terraform_file import TerraformFile
 
 def find_in_dict(nest,keyword,paths=None,location=None):
     """
-    Generate path to value if key contains keyword
+    Generate path to value if key contains keyword. This function is recursive.
+
+    Inputs:
+    nest      : dict - input dictionary
+    keyword   : str  - keyword to search for. Is identified if keyword is found at all in key.
+    paths     : list[location:str,jkey:str,nest[jkey]] - output list containing the python syntax to locate a key/value pair, the key, and the value
+    location  : str - the python syntax to locate a key/value pair
+
+    Outputs:
+    paths     : list[location:str,jkey:str,nest[jkey]] - output list containing the python syntax to locate a key/value pair, the key, and the value
     """
+
     if paths is None:
         paths = []
     if location is None:
@@ -35,25 +45,42 @@ def find_in_dict(nest,keyword,paths=None,location=None):
     return paths
 
 def get_resources(response):
-        
-    # all_recs      = find_in_dict(response,'Id')
-    vpc_recs      = find_in_dict(response,'VpcId')
-    subnet_recs   = find_in_dict(response,'SubnetId')
-    # Add resources as needed
-    # instance_recs = find_in_dict(response,'InstanceId')
+    """
+    Find the unique AWS resources within the boto3 response
+
+    Inputs:
+    response  : Boto3Response.ec2_responses (dict) 
+
+    Outputs:
+    uni_recs : list - all unique recs that match supplied ID keywords
+    uni_ids  : list - the ID corresponding to uni_recs
+    """    
+
+    # Search for these keywords in response
+    resource_id_keywords = ['VpcId',
+                            'SubnetId',
+                            'InstanceId']
+    
+    resources = []
+    for jkeyword in resource_id_keywords:
+        resources.append(find_in_dict(response,jkeyword))
+
+    # Combine all resources found into single list
+    resources_combined = []
+    for jrec in resources:
+        resources_combined += jrec
 
     # Find all unique resources
-    all_recs = vpc_recs + subnet_recs
     uni_recs = []
     uni_ids  = []
-    for jrec in all_recs:
+    for jrec in resources_combined:
         id = jrec[2]
         rec = jrec[1]
         if id not in uni_ids:
             uni_recs.append(rec)
             uni_ids.append(id)
 
-    return uni_recs,uni_ids
+    return uni_recs, uni_ids
 
 def main():
     mode = sys.argv[1]
@@ -72,31 +99,27 @@ def main():
         but those resources should be identical to those which were imported originally.
         """
 
-        # # Generate boto3 responses from image
+        # Generate boto3 responses
         response = Boto3Response()
-        response.ami = 'ami-005f9685cb30f234b'
         response.gen_all_responses()
 
         # Obtain list of all resources and their IDs
         uni_recs, uni_ids = get_resources(response.ec2_responses)
 
-        name_table = {"VpcId"   :"vpc",
-                      "SubnetId":"subnet"
+        name_table = {"VpcId"      : "vpc",
+                      "SubnetId"   : "subnet",
+                      "InstanceId" : "instance"
                     }        
 
         # Create basic config file that will be used to import the resources
         TF = TerraformFile()
         TF.set_wdir(wdir)
         TF.config_file = os.path.join(wdir,'dev_file.tf')
+
         PB = ProviderBlock(response)
         TF.Blocks.append(PB)
         TF.write()
         TF.Blocks = []
-
-        # cd into where terraform is output
-        dir = os.path.dirname(os.path.realpath(TF.config_file))
-        os.chdir(dir)         
-        subprocess.run(["terraform","init"])
 
         nrecs = len(uni_recs)
         for j in range(nrecs):
@@ -108,11 +131,17 @@ def main():
                 TF.Blocks.append(VPC)
             if resource_type == 'subnet':
                 SUB = ResourceBlock('aws_subnet',{},local_name)   
-                TF.Blocks.append(SUB)     
+                TF.Blocks.append(SUB)    
+            if resource_type == 'instance':
+                INS = ResourceBlock('aws_instance',{},local_name)   
+                TF.Blocks.append(INS)                   
 
         TF.append_file()                            
                     
-        # Now that we have all the resources, lets import them        
+        # Now that we have all the resources, lets import them            
+        os.chdir(wdir)         
+        subprocess.run(["terraform","init"])     
+
         for j in range(nrecs):
             jrec = uni_recs[j]
             jid = uni_ids[j]
@@ -122,13 +151,12 @@ def main():
             subprocess.run(["terraform","import",f"aws_{resource_type}.{local_name}",f"{jid}"])
 
         TF.file_str = PB.block_str + '}\n'
-        TF.state2config()  
+        TF.show2config()  
         TF.validate()
                       
     elif mode == 'clone':    
         # # Generate boto3 responses from image
         response = Boto3Response()
-        response.ami = 'ami-005f9685cb30f234b'
         response.gen_all_responses()
         response.tag_split()
         # with open('/home/jlaser/code/terraform_tools/AWS_response.obj','wb') as f:
@@ -198,12 +226,11 @@ def main():
         # TODO: Do all the other blocks
 
 
-
         # Write the file and validate it matches the existing infrastructure
         TF.write()
         TF.validate()
     else:
-        raise Exception(f'Mode {mode} has not yet been implemented')
+        raise Exception(f'Mode {mode} has not yet been implemented. \'clone\' and \'destruct\' are accepted options')
 
 if __name__ == '__main__':
     main()

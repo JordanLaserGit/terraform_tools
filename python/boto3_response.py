@@ -3,7 +3,6 @@ import boto3
 class Boto3Response():
 
     def __init__(self):
-        self.ami  = ''
         self.ec2  = boto3.client('ec2')
         self.ec2_responses = dict()
 
@@ -240,10 +239,10 @@ class Boto3Response():
         #     self.ec2_responses['instance_types']                                                   = self.ec2.describe_instance_types()
         # except:
         #     failed.append('describe_instance_types')
-        # try:
-        #     self.ec2_responses['instances']                                                        = self.ec2.describe_instances()
-        # except:
-        #     failed.append('describe_instances')
+        try:
+            self.ec2_responses['instances']                                                        = self.ec2.describe_instances()
+        except:
+            failed.append('describe_instances')
         # try:
         #     self.ec2_responses['internet_gateways']                                                = self.ec2.describe_internet_gateways()
         # except:

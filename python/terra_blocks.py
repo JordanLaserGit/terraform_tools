@@ -19,6 +19,8 @@ class ResourceBlock():
             self.args = get_aws_vpc_mapping(Response)
         elif resource == 'aws_subnet':
             self.args = get_aws_subnet_mapping(Response)
+        elif resource == 'aws_instance':
+            self.args = get_aws_instance_mapping(Response)            
         else:
             raise Exception(f'{resource} is not within the built responses. Perhaps contact Jordan and ask him to build it.')
         
@@ -60,6 +62,63 @@ def get_<>_mapping(response):
     return mapping
 
 """
+# aws_subnet
+def get_aws_instance_mapping(response):
+
+    init_val = None
+
+    # Optional arguments   
+    mapping = {} 
+
+    if 'instance' not in response:
+        # return required fields
+        return mapping
+
+    # TODO, create mapping if we still want to go that route. 
+    # vpc_local_name = response['vpc_args']['tags']['Name']
+
+    # # Give variable reference 
+    # # vpc_id = response['vpc']['VpcId']
+    # vpc_id = f'VARaws_vpc.{vpc_local_name}.id'
+
+    # # Conditions under which we want to include this arguement
+    # ii_availability_zone    = 'AvailabilityZone' in response['subnet']
+    # # ii_availability_zone_id = 'AvailabilityZoneId' in response['subnet']
+    # ii_cidr_block           = 'CidrBlock' in response['subnet']
+    # # ii_default_for_az       = 'DefaultForAz' in response['subnet'] Terraform throws an error on state even though its specified in the docs?
+    # ii_filter               = False # Need implementation
+    # # ii_id                   = 'SubnetId' in response['subnet']
+    # ii_ipv6_cidr_block      = False # Need implementation
+    # # ii_state                = 'State' in response['subnet'] Terraform throws an error on state even though its specified in the docs?
+    # ii_tags                 = 'tags' in response
+    # ii_vpc_id               = True
+
+    # # Include arguments if criteria is met   
+    # if ii_availability_zone:
+    #     mapping['availability_zone']    = response['subnet']['AvailabilityZone']    
+    # # if ii_availability_zone_id:
+    # #     mapping['availability_zone_id'] = response['subnet']['AvailabilityZoneId']
+    # if ii_cidr_block:
+    #     mapping['cidr_block']           = response['subnet']['CidrBlock']
+    # # if ii_default_for_az: 
+    # #     mapping['default_for_az']       = response['subnet']['DefaultForAz']
+    # if ii_filter:
+    #     raise NotImplementedError()
+    #     mapping['filter' ]              = init_val      
+    # # if ii_id:
+    # #     mapping['id']                   = response['subnet']['SubnetId']     
+    # if ii_ipv6_cidr_block:  
+    #     raise NotImplementedError()
+    #     mapping['ipv6_cidr_block']      = init_val
+    # # if ii_state:
+    # #     mapping['state']                = response['subnet']['State']   
+    # if ii_tags:
+    #     mapping['tags']                 = response['tags']
+    # if ii_vpc_id:
+    #      mapping['vpc_id']              = vpc_id                              
+
+    return mapping
+
 # aws_subnet
 def get_aws_subnet_mapping(response):
 
