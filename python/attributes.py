@@ -4,7 +4,7 @@ def get_attrs():
     """
     attrs = {}
 
-    attrs['vpc'] = [
+    attrs['aws_vpc'] = [
         'cidr_block',
         'instance_tenancy',
         'enable_dns_support',
@@ -17,7 +17,7 @@ def get_attrs():
         'ipv4_netmask_length'
         ]
 
-    attrs['subnet'] = [
+    attrs['aws_subnet'] = [
         'availability_zone',
         'map_public_ip_on_launch',
         'cidr_block',
@@ -29,7 +29,7 @@ def get_attrs():
         'vpc_id'
         ]       
         
-    attrs['instance'] = [
+    attrs['aws_instance'] = [
         'ami',
         'associate_public_ip_address',
         'availability_zone',
@@ -68,16 +68,25 @@ def get_attrs():
         'vpc_security_group_ids'
         ]  
 
-    attrs['security_group'] = [
-        'availability_zone',
-        'map_public_ip_on_launch',
-        'cidr_block',
-        'default_for_az',
-        'filter',
-        'ipv6_cidr_block',
-        'state',
+    attrs['aws_security_group'] = [
+        'description',
+        'egress',
+        'ingress',
+        'name',
         'tags',
         'vpc_id'
-        ]     
+        ] 
+
+    attrs['ingress/egress'] = [
+            'cidr_blocks',
+            'description',
+            'from_port',
+            'ipv6_cidr_blocks',
+            'prefix_list_ids',
+            'protocol',
+            'security_groups',
+            'self',
+            'to_port'
+    ]    
     
     return attrs
