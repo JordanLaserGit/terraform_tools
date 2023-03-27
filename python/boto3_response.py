@@ -411,10 +411,10 @@ class Boto3Response():
         #     self.ec2_responses['security_group_rules']                                             = self.ec2.describe_security_group_rules()
         # except:
         #     failed.append('describe_security_group_rules')
-        # try:
-        #     self.ec2_responses['security_groups']                                                  = self.ec2.describe_security_groups()
-        # except:
-        #     failed.append('describe_security_groups')
+        try:
+            self.ec2_responses['security_groups']                                                  = self.ec2.describe_security_groups()
+        except:
+            failed.append('describe_security_groups')
         # try:
         #     self.ec2_responses['snapshot_attribute']                                               = self.ec2.describe_snapshot_attribute()
         # except:
@@ -559,73 +559,73 @@ class Boto3Response():
         #     self.ec2_responses['volumes_modifications']                                            = self.ec2.describe_volumes_modifications()
         # except:
         #     failed.append('describe_volumes_modifications')
-        try:
-            self.ec2_responses['vpc_classic_link']                                                 = self.ec2.describe_vpc_classic_link()
-        except:
-            failed.append('describe_vpc_classic_link')
-        try:
-            self.ec2_responses['vpc_classic_link_dns_support']                                     = self.ec2.describe_vpc_classic_link_dns_support()
-        except:
-            failed.append('describe_vpc_classic_link_dns_support')
-        try:
-            self.ec2_responses['vpc_endpoint_connection_notifications']                            = self.ec2.describe_vpc_endpoint_connection_notifications()
-        except:
-            failed.append('describe_vpc_endpoint_connection_notifications')
-        try:
-            self.ec2_responses['vpc_endpoint_connections']                                         = self.ec2.describe_vpc_endpoint_connections()
-        except:
-            failed.append('describe_vpc_endpoint_connections')
-        try:
-            self.ec2_responses['vpc_endpoint_service_configurations']                              = self.ec2.describe_vpc_endpoint_service_configurations()
-        except:
-            failed.append('describe_vpc_endpoint_service_configurations')
-        try:
-            self.ec2_responses['vpc_endpoint_service_permissions']                                 = self.ec2.describe_vpc_endpoint_service_permissions()
-        except:
-            failed.append('describe_vpc_endpoint_service_permissions')
-        try:
-            self.ec2_responses['vpc_endpoint_services']                                            = self.ec2.describe_vpc_endpoint_services()
-        except:
-            failed.append('describe_vpc_endpoint_services')
-        try:
-            self.ec2_responses['vpc_endpoints']                                                    = self.ec2.describe_vpc_endpoints()
-        except:
-            failed.append('describe_vpc_endpoints')
-        try:
-            self.ec2_responses['vpc_peering_connections']                                          = self.ec2.describe_vpc_peering_connections()
-        except:
-            failed.append('describe_vpc_peering_connections')
+        # try:
+        #     self.ec2_responses['vpc_classic_link']                                                 = self.ec2.describe_vpc_classic_link()
+        # except:
+        #     failed.append('describe_vpc_classic_link')
+        # try:
+        #     self.ec2_responses['vpc_classic_link_dns_support']                                     = self.ec2.describe_vpc_classic_link_dns_support()
+        # except:
+        #     failed.append('describe_vpc_classic_link_dns_support')
+        # try:
+        #     self.ec2_responses['vpc_endpoint_connection_notifications']                            = self.ec2.describe_vpc_endpoint_connection_notifications()
+        # except:
+        #     failed.append('describe_vpc_endpoint_connection_notifications')
+        # try:
+        #     self.ec2_responses['vpc_endpoint_connections']                                         = self.ec2.describe_vpc_endpoint_connections()
+        # except:
+        #     failed.append('describe_vpc_endpoint_connections')
+        # try:
+        #     self.ec2_responses['vpc_endpoint_service_configurations']                              = self.ec2.describe_vpc_endpoint_service_configurations()
+        # except:
+        #     failed.append('describe_vpc_endpoint_service_configurations')
+        # try:
+        #     self.ec2_responses['vpc_endpoint_service_permissions']                                 = self.ec2.describe_vpc_endpoint_service_permissions()
+        # except:
+        #     failed.append('describe_vpc_endpoint_service_permissions')
+        # try:
+        #     self.ec2_responses['vpc_endpoint_services']                                            = self.ec2.describe_vpc_endpoint_services()
+        # except:
+        #     failed.append('describe_vpc_endpoint_services')
+        # try:
+        #     self.ec2_responses['vpc_endpoints']                                                    = self.ec2.describe_vpc_endpoints()
+        # except:
+        #     failed.append('describe_vpc_endpoints')
+        # try:
+        #     self.ec2_responses['vpc_peering_connections']                                          = self.ec2.describe_vpc_peering_connections()
+        # except:
+        #     failed.append('describe_vpc_peering_connections')
         try:
             self.ec2_responses['vpcs']                                                             = self.ec2.describe_vpcs()
         except:
             failed.append('describe_vpcs')
-        try:
-            self.ec2_responses['vpn_connections']                                                  = self.ec2.describe_vpn_connections()
-        except:
-            failed.append('describe_vpn_connections')
-        try:
-            self.ec2_responses['vpn_gateways']                                                     = self.ec2.describe_vpn_gateways()
-        except:
-            failed.append('describe_vpn_gateways')    
+        # try:
+        #     self.ec2_responses['vpn_connections']                                                  = self.ec2.describe_vpn_connections()
+        # except:
+        #     failed.append('describe_vpn_connections')
+        # try:
+        #     self.ec2_responses['vpn_gateways']                                                     = self.ec2.describe_vpn_gateways()
+        # except:
+        #     failed.append('describe_vpn_gateways')    
 
-        try:
-            self.ec2_responses['enableDnsSupport']                 = []
-            self.ec2_responses['enableDnsHostnames']               = []
-            self.ec2_responses['enableNetworkAddressUsageMetrics'] = []
+        # try:
+        #     self.ec2_responses['enableDnsSupport']                 = []
+        #     self.ec2_responses['enableDnsHostnames']               = []
+        #     self.ec2_responses['enableNetworkAddressUsageMetrics'] = []
 
-            for jvpc in range(len(self.ec2_responses['vpcs']['Vpcs'])):
-                vpc_id = self.ec2_responses['vpcs']['Vpcs'][jvpc]['VpcId']
-                self.ec2_responses['enableDnsSupport'].append(
-                                                                self.ec2.describe_vpc_attribute(Attribute='enableDnsSupport',
-                                                                                                VpcId=vpc_id))
-                self.ec2_responses['enableDnsHostnames'].append(
-                                                                self.ec2.describe_vpc_attribute(Attribute='enableDnsHostnames',
-                                                                                                VpcId=vpc_id))
-                self.ec2_responses['enableNetworkAddressUsageMetrics'].append(
-                                                                self.ec2.describe_vpc_attribute(Attribute='enableNetworkAddressUsageMetrics',
-                                                                                                VpcId=vpc_id))                                
-        except:
-            failed.append('describe_vpc_attribute')                
+        #     for jvpc in range(len(self.ec2_responses['vpcs']['Vpcs'])):
+        #         vpc_id = self.ec2_responses['vpcs']['Vpcs'][jvpc]['VpcId']
+        #         self.ec2_responses['enableDnsSupport'].append(
+        #                                                         self.ec2.describe_vpc_attribute(Attribute='enableDnsSupport',
+        #                                                                                         VpcId=vpc_id))
+        #         self.ec2_responses['enableDnsHostnames'].append(
+        #                                                         self.ec2.describe_vpc_attribute(Attribute='enableDnsHostnames',
+        #                                                                                         VpcId=vpc_id))
+        #         self.ec2_responses['enableNetworkAddressUsageMetrics'].append(
+        #                                                         self.ec2.describe_vpc_attribute(Attribute='enableNetworkAddressUsageMetrics',
+        #                                                                                         VpcId=vpc_id))                                
+        # except:
+        #     failed.append('describe_vpc_attribute')                
 
 
         self.ec2_responses_failed = failed

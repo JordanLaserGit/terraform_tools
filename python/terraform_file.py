@@ -1,11 +1,13 @@
 import os, subprocess, re
+from attributes import *
 
 class TerraformFile():
 
     def __init__(self):
-        self.terra_dir  = ''
+        self.terra_dir   = ''
         self.file_str    = ''
         self.config_file = ''
+        self.attrs       = get_attrs()
         self.Blocks      = []  
 
     def set_wdir(self,terra_dir):
@@ -88,84 +90,12 @@ class TerraformFile():
         with open(show,'r') as f:
             tf_lines = f.readlines()
 
-        # Need to add: 
-        vpc_attrs = [
-            'cidr_block',
-            'instance_tenancy',
-            'enable_dns_support',
-            'enable_dns_hostnames',
-            'enable_network_address_usage_metrics',
-            'tags',
-            'ipv6_cidr_block',
-            'assign_generated_ipv6_cidr_block',
-            'ipv4_ipam_pool_id',
-            'ipv4_netmask_length'
-            ]
-        
-        subnet_attrs = [
-            'availability_zone',
-            'map_public_ip_on_launch',
-            'cidr_block',
-            'default_for_az',
-            'filter',
-            'ipv6_cidr_block',
-            'state',
-            'tags',
-            'vpc_id'
-            ]       
-         
-        instance_attrs = [
-            'ami',
-            'associate_public_ip_address',
-            'availability_zone',
-            'capacity_reservation_specification',
-            'cpu_core_count',
-            'cpu_threads_per_core',
-            'credit_specification',
-            'disable_api_stop',
-            'disable_api_termination',
-            'ebs_block_device',
-            'ebs_optimized',
-            'enclave_options',
-            'ephemeral_block_device',
-            'get_password_data',
-            'hibernation',
-            'host_id',
-            'host_resource_group_arn',
-            'iam_instance_profile',
-            'instance_initiated_shutdown_behavior',
-            'instance_type',
-            'key_name',
-            'launch_template',
-            'maintenance_options',
-            'metadata_options',
-            'monitoring',
-            'network_interface',
-            'placement_group',
-            'placement_partition_number',
-            'private_dns_name_options',
-            'private_ip',
-            'secondary_private_ips',
-            'security_groups',
-            'subnet_id',
-            'tags',
-            'tenancy',
-            'vpc_security_group_ids'
-            ]  
+     
+        # Might need to add logic about rejecting or modifying attributes based on values imported
 
         # Only add if ipv6_address_count > 0
         if False:
-            instance_attrs.append('ipv6_address_count','ipv6_addresses')
-
-        # List of attributes that are contexts (braced attributes)
-        contexts = ['capacity_reservation_specification',
-                    'credit_specification',
-                    'enclave_options',
-                    'maintenance_options',
-                    'metadata_options',
-                    'private_dns_name_options',
-                    'tags'
-                    ]       
+            instance_attrs.append('ipv6_address_count','ipv6_addresses') 
         
         # Create the string that will be written to file
         # Algorithm is to 
@@ -176,11 +106,15 @@ class TerraformFile():
         ii_context = False
         ii_list    = False
         ii_skip    = False
+        ii_ingress_egress = False
         for j in range(len(tf_lines)):
             line = tf_lines[j]
 
+            if j == 105:
+                print()
+
             ii_contains_pound            = line.find('#') >= 0
-            ii_contains_only_right_brace = line.find('}\n') >= 0 and not line.find('{}') >= 0
+            ii_contains_only_right_brace = (line.find('}\n') >= 0 or line.find('},') >= 0) and not line.find('{}') >= 0
             ii_contains_only_left_brace  = line.find('{\n') >= 0 and not line.find('{}') >= 0
             ii_contains_right_bracket    = line.find(']\n') >= 0
             ii_lineskip_close_context    = line == '\n' or line == '}\n'
@@ -195,15 +129,20 @@ class TerraformFile():
                     out += line
                 if ii_contains_only_right_brace:
                     ii_context = False  
-                    ii_skip    = False                  
+                    ii_skip    = False
+                    if ii_ingress_egress:
+                        attrs = self.attrs['aws_security_group']  
+                        ii_ingress_egress = False 
+                        ii_list = True               
                 continue
 
             if ii_list:
                 if ii_contains_right_bracket:
-                    ii_list = False  
+                    ii_list     = False     
                 out += line
                 continue
 
+            # This is for skipping lines internal to a context that we want to leave out
             if ii_skip:
                 continue
 
@@ -216,21 +155,24 @@ class TerraformFile():
                 split = line.split('\"')
                 resource_type = split[1]
                 resource_name = split[3]
-                if resource_type == 'aws_vpc':
-                    attrs = vpc_attrs
-                elif resource_type == 'aws_subnet':
-                    attrs = subnet_attrs
-                elif resource_type == 'aws_instance':
-                    attrs = instance_attrs                    
+                attrs = self.attrs[resource_type]                 
                 out += line
-                continue               
+                continue       
+
+            if line.find('egress') >= 0 or line.find('ingress') >= 0:
+                attrs = self.attrs['ingress/egress'] 
+                ii_list    = False
+                ii_context = True
+                ii_ingress_egress = True
+                out += line
+                continue                
 
             # Within the resource. Decide to include attr
-            split_eq = line.split('=')
+            split_eq   = line.split('=')
             split_brac = line.split('{')
-            if ii_contains_only_left_brace:
+            if ii_contains_only_left_brace and not ii_ingress_egress:
                 ii_context = True
-                if  not (split_eq[0].strip() in contexts or split_brac[0].strip() in contexts): 
+                if  not (split_eq[0].strip() in attrs or split_brac[0].strip() in attrs): 
                         ii_skip = True                  
 
             if split_eq[0].strip() in attrs or split_brac[0].strip() in attrs: # include only if in attrs                

@@ -59,7 +59,8 @@ def get_resources(response):
     # Search for these keywords in response
     resource_id_keywords = ['VpcId',
                             'SubnetId',
-                            'InstanceId']
+                            'InstanceId',
+                            'GroupId']
     
     resources = []
     for jkeyword in resource_id_keywords:
@@ -108,7 +109,8 @@ def main():
 
         name_table = {"VpcId"      : "vpc",
                       "SubnetId"   : "subnet",
-                      "InstanceId" : "instance"
+                      "InstanceId" : "instance",
+                      "GroupId"    : "security_group"
                     }        
 
         # Create basic config file that will be used to import the resources
@@ -134,7 +136,10 @@ def main():
                 TF.Blocks.append(SUB)    
             if resource_type == 'instance':
                 INS = ResourceBlock('aws_instance',{},local_name)   
-                TF.Blocks.append(INS)                   
+                TF.Blocks.append(INS)       
+            if resource_type == 'security_group':
+                SECGRP = ResourceBlock('aws_security_group',{},local_name)   
+                TF.Blocks.append(SECGRP)                             
 
         TF.append_file()                            
                     

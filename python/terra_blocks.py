@@ -15,12 +15,15 @@ class ResourceBlock():
 
     def __init__(self, resource, Response,local_name=None):        
     
+        #TODO: Delete this block if clone mode is depreciated
         if resource == 'aws_vpc':
             self.args = get_aws_vpc_mapping(Response)
         elif resource == 'aws_subnet':
             self.args = get_aws_subnet_mapping(Response)
         elif resource == 'aws_instance':
-            self.args = get_aws_instance_mapping(Response)            
+            self.args = get_aws_instance_mapping(Response)           
+        elif resource == 'aws_security_group':
+            self.args = {}              
         else:
             raise Exception(f'{resource} is not within the built responses. Perhaps contact Jordan and ask him to build it.')
         
