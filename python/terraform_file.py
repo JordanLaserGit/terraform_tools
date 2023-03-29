@@ -114,6 +114,8 @@ class TerraformFile():
             line = tf_lines[j]
             split_eq   = line.split('=')
             split_brac = line.split('{')
+            variable_name = split_eq[0].strip()
+            context_name = split_brac[0].strip()
 
             ii_contains_pound            = line.find('#') >= 0
             ii_contains_only_right_brace = (line.find('}\n') >= 0 or line.find('},') >= 0) and not line.find('{}') >= 0
@@ -130,7 +132,6 @@ class TerraformFile():
                 ii_route = False
                 continue # Edge case to handle route formatting difference            
 
-            
             if ii_context and not ii_list: 
                 if ii_route:
                     if ii_contains_only_left_brace:
@@ -152,8 +153,7 @@ class TerraformFile():
                     if ii_ingress_egress:
                         attrs = self.attrs['aws_security_group']  
                         ii_ingress_egress = False 
-                        ii_list = True         
-                        
+                        ii_list = True                                 
                 continue
 
             if ii_list:
@@ -167,15 +167,11 @@ class TerraformFile():
                     out += line
                 continue
 
-            # This is for skipping lines internal to a context that we want to leave out
-            if ii_skip:
-                continue
-
             if ii_lineskip_close_context:
                 out += line
                 continue
             
-            # New resource, set attrs and add line
+            # Set attrs
             if line.find('resource ') >= 0:
                 split = line.split('\"')
                 resource_type = split[1]
@@ -183,9 +179,8 @@ class TerraformFile():
                 context = resource_type
                 attrs = self.attrs[resource_type]                 
                 out += line
-                continue       
+                continue    
 
-            # Contexts within the resource block that have their own attributes
             if line.find('egress') >= 0 or line.find('ingress') >= 0:
                 context = 'ingress/egress'
                 attrs = self.attrs[context] 
@@ -193,7 +188,7 @@ class TerraformFile():
                 ii_context = True
                 ii_ingress_egress = True
                 out += line
-                continue         
+                continue    
 
             if line.find('route ') >= 0:
                 context = 'route'
@@ -202,16 +197,19 @@ class TerraformFile():
                 ii_context = True
                 ii_route   = True
                 out += 'route {\n'
-                continue                       
+                continue         
+
+
+            ii_in_attr = variable_name in attrs or context_name in attrs              
 
             # Within the resource. Decide to include attr
             if ii_contains_only_left_brace and not ii_ingress_egress and not ii_route:
                 ii_context = True
-                context = split_brac[0].strip()
-                if  not (split_eq[0].strip() in attrs or split_brac[0].strip() in attrs): 
+                context = context_name
+                if not ii_in_attr: 
                         ii_skip = True                  
 
-            if split_eq[0].strip() in attrs or split_brac[0].strip() in attrs: # include only if in attrs                
+            if ii_in_attr: # include only if in attrs                
                 if line.find('= [\n') >= 0:
                     ii_list = True
                 if line.find('_id') >= 0 or ii_id: # Opportunity to replace id with reference
@@ -223,7 +221,6 @@ class TerraformFile():
                 else:
                     out += line
                 
-
         self.file_str += out  
         self.write_file_str()  
 
