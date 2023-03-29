@@ -1,6 +1,9 @@
 def get_attrs():
     """
     Attributes copied from tf show and then used to build a terraform config file.
+
+    If an attribute is included in the config, and you'd like to remove it,
+    remove that element from the list below
     """
     attrs = {}
 
@@ -78,15 +81,41 @@ def get_attrs():
         ] 
 
     attrs['ingress/egress'] = [
-            'cidr_blocks',
-            'description',
-            'from_port',
-            'ipv6_cidr_blocks',
-            'prefix_list_ids',
-            'protocol',
-            'security_groups',
-            'self',
-            'to_port'
+        'cidr_blocks',
+        'description',
+        'from_port',
+        'ipv6_cidr_blocks',
+        'prefix_list_ids',
+        'protocol',
+        'security_groups',
+        'self',
+        'to_port'
     ]    
+
+    attrs['aws_internet_gateway'] = [
+        'vpc_id',
+        'tags',
+    ]      
+
+    attrs['aws_route_table'] = [
+        'vpc_id',
+        'route',
+        'tags'
+    ]  
+
+    attrs['route'] = [
+        'carrier_gateway_id',
+        'cidr_block',
+        'core_network_arn',
+        'destination_prefix_list_id',
+        'egress_only_gateway_id',
+        'gateway_id',
+        'local_gateway_id',
+        'nat_gateway_id',
+        'network_interface_id',
+        'transit_gateway_id',
+        'vpc_endpoint_id',
+        'vpc_peering_connection_id'
+    ]       
     
     return attrs

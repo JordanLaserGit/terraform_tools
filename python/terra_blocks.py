@@ -23,10 +23,10 @@ class ResourceBlock():
         elif resource == 'aws_instance':
             self.args = get_aws_instance_mapping(Response)           
         elif resource == 'aws_security_group':
-            self.args = {}              
+            self.args = {}                      
         else:
-            raise Exception(f'{resource} is not within the built responses. Perhaps contact Jordan and ask him to build it.')
-        
+            self.args = {}
+            
         # Note! Terraform local name and the tag 'Name" (from boto3) are not necessarily the same.
         # Buuuut we treat them as the same here. boto3 does not have a local_name for resources.
         if local_name is None:

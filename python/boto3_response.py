@@ -243,10 +243,10 @@ class Boto3Response():
             self.ec2_responses['instances']                                                        = self.ec2.describe_instances()
         except:
             failed.append('describe_instances')
-        # try:
-        #     self.ec2_responses['internet_gateways']                                                = self.ec2.describe_internet_gateways()
-        # except:
-        #     failed.append('describe_internet_gateways')
+        try:
+            self.ec2_responses['internet_gateways']                                                = self.ec2.describe_internet_gateways()
+        except:
+            failed.append('describe_internet_gateways')
         # try:
         #     self.ec2_responses['ipam_pools']                                                       = self.ec2.describe_ipam_pools()
         # except:
@@ -391,10 +391,10 @@ class Boto3Response():
         #     self.ec2_responses['reserved_instances_offerings']                                     = self.ec2.describe_reserved_instances_offerings()
         # except:
         #     failed.append('describe_reserved_instances_offerings')
-        # try:
-        #     self.ec2_responses['route_tables']                                                     = self.ec2.describe_route_tables()
-        # except:
-        #     failed.append('describe_route_tables')
+        try:
+            self.ec2_responses['route_tables']                                                     = self.ec2.describe_route_tables()
+        except:
+            failed.append('describe_route_tables')
         # try:
         #     self.ec2_responses['scheduled_instance_availability']                                  = self.ec2.describe_scheduled_instance_availability()
         # except:

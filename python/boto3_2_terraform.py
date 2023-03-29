@@ -44,7 +44,7 @@ def find_in_dict(nest,keyword,paths=None,location=None):
 
     return paths
 
-def get_resources(response):
+def get_resources(response,keys):
     """
     Find the unique AWS resources within the boto3 response
 
@@ -55,15 +55,9 @@ def get_resources(response):
     uni_recs : list - all unique recs that match supplied ID keywords
     uni_ids  : list - the ID corresponding to uni_recs
     """    
-
-    # Search for these keywords in response
-    resource_id_keywords = ['VpcId',
-                            'SubnetId',
-                            'InstanceId',
-                            'GroupId']
     
     resources = []
-    for jkeyword in resource_id_keywords:
+    for jkeyword in keys:
         resources.append(find_in_dict(response,jkeyword))
 
     # Combine all resources found into single list
@@ -104,14 +98,16 @@ def main():
         response = Boto3Response()
         response.gen_all_responses()
 
-        # Obtain list of all resources and their IDs
-        uni_recs, uni_ids = get_resources(response.ec2_responses)
+        name_table = {"VpcId"      : "aws_vpc",
+                      "SubnetId"   : "aws_subnet",
+                      "InstanceId" : "aws_instance",
+                      "GroupId"    : "aws_security_group",
+                      "InternetGatewayId":"aws_internet_gateway",
+                      "RouteTableId" : "aws_route_table"
+                    }          
 
-        name_table = {"VpcId"      : "vpc",
-                      "SubnetId"   : "subnet",
-                      "InstanceId" : "instance",
-                      "GroupId"    : "security_group"
-                    }        
+        # Obtain list of all resources and their IDs
+        uni_recs, uni_ids = get_resources(response.ec2_responses, name_table)      
 
         # Create basic config file that will be used to import the resources
         TF = TerraformFile()
@@ -128,18 +124,9 @@ def main():
             jrec = uni_recs[j]
             resource_type = name_table[jrec]
             local_name = resource_type + f'{j}'
-            if resource_type == 'vpc':
-                VPC = ResourceBlock('aws_vpc',{},local_name)
-                TF.Blocks.append(VPC)
-            if resource_type == 'subnet':
-                SUB = ResourceBlock('aws_subnet',{},local_name)   
-                TF.Blocks.append(SUB)    
-            if resource_type == 'instance':
-                INS = ResourceBlock('aws_instance',{},local_name)   
-                TF.Blocks.append(INS)       
-            if resource_type == 'security_group':
-                SECGRP = ResourceBlock('aws_security_group',{},local_name)   
-                TF.Blocks.append(SECGRP)                             
+
+            BLK = ResourceBlock(resource_type,{},local_name)
+            TF.Blocks.append(BLK)                                  
 
         TF.append_file()                            
                     
@@ -152,8 +139,10 @@ def main():
             jid = uni_ids[j]
             resource_type = name_table[jrec]
             local_name = resource_type + f'{j}'
-            print(f'Importing Terraform resource {jrec}...')
-            subprocess.run(["terraform","import",f"aws_{resource_type}.{local_name}",f"{jid}"])
+            TF.resources[jid] = [local_name,resource_type]
+            if False:
+                print(f'Importing Terraform resource {jrec}...')
+                subprocess.run(["terraform","import",f"{resource_type}.{local_name}",f"{jid}"])
 
         TF.file_str = PB.block_str + '}\n'
         TF.show2config()  

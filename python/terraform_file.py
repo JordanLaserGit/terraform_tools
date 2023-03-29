@@ -9,6 +9,7 @@ class TerraformFile():
         self.config_file = ''
         self.attrs       = get_attrs()
         self.Blocks      = []  
+        self.resources   = {}
 
     def set_wdir(self,terra_dir):
         if not os.path.exists(terra_dir):
@@ -106,40 +107,64 @@ class TerraformFile():
         ii_context = False
         ii_list    = False
         ii_skip    = False
+        ii_route   = False
+        ii_id      = False
         ii_ingress_egress = False
         for j in range(len(tf_lines)):
             line = tf_lines[j]
-
-            if j == 105:
-                print()
+            split_eq   = line.split('=')
+            split_brac = line.split('{')
 
             ii_contains_pound            = line.find('#') >= 0
             ii_contains_only_right_brace = (line.find('}\n') >= 0 or line.find('},') >= 0) and not line.find('{}') >= 0
             ii_contains_only_left_brace  = line.find('{\n') >= 0 and not line.find('{}') >= 0
-            ii_contains_right_bracket    = line.find(']\n') >= 0
+            ii_contains_right_bracket    = line.find(']\n') >= 0 and not line.find('[]') >= 0
             ii_lineskip_close_context    = line == '\n' or line == '}\n'
 
             # Exclude line         
             if ii_contains_pound:
                 continue
 
-            # Include line
-            if ii_context: 
+            if not ii_list and ii_contains_right_bracket: 
+                attrs = self.attrs['aws_route_table']  
+                ii_route = False
+                continue # Edge case to handle route formatting difference            
+
+            
+            if ii_context and not ii_list: 
+                if ii_route:
+                    if ii_contains_only_left_brace:
+                        continue
+                    elif ii_contains_only_right_brace:
+                        out += '    }\n'
+                        continue
                 if not ii_skip:
-                    out += line
+                    if context in self.attrs.keys(): 
+                        out = self.check_for_ref(out,line,resource_name, attrs)
+                    else: # For contexts that don't have attributes filled out
+                        out = self.check_for_ref(out,line,resource_name)
+                    if line.find('= [\n') >= 0:
+                        ii_list = True
                 if ii_contains_only_right_brace:
                     ii_context = False  
                     ii_skip    = False
+                    # Switch attrs back to resource attrs from context
                     if ii_ingress_egress:
                         attrs = self.attrs['aws_security_group']  
                         ii_ingress_egress = False 
-                        ii_list = True               
+                        ii_list = True         
+                        
                 continue
 
             if ii_list:
                 if ii_contains_right_bracket:
-                    ii_list     = False     
-                out += line
+                    ii_list     = False  
+                    ii_id       = False
+                    out += line
+                elif ii_id:
+                    out = self.check_for_ref(out,line,resource_name,attrs) 
+                else:
+                    out += line
                 continue
 
             # This is for skipping lines internal to a context that we want to leave out
@@ -155,37 +180,103 @@ class TerraformFile():
                 split = line.split('\"')
                 resource_type = split[1]
                 resource_name = split[3]
+                context = resource_type
                 attrs = self.attrs[resource_type]                 
                 out += line
                 continue       
 
+            # Contexts within the resource block that have their own attributes
             if line.find('egress') >= 0 or line.find('ingress') >= 0:
-                attrs = self.attrs['ingress/egress'] 
+                context = 'ingress/egress'
+                attrs = self.attrs[context] 
                 ii_list    = False
                 ii_context = True
                 ii_ingress_egress = True
                 out += line
-                continue                
+                continue         
+
+            if line.find('route ') >= 0:
+                context = 'route'
+                attrs = self.attrs[context] 
+                ii_list    = False
+                ii_context = True
+                ii_route   = True
+                out += 'route {\n'
+                continue                       
 
             # Within the resource. Decide to include attr
-            split_eq   = line.split('=')
-            split_brac = line.split('{')
-            if ii_contains_only_left_brace and not ii_ingress_egress:
+            if ii_contains_only_left_brace and not ii_ingress_egress and not ii_route:
                 ii_context = True
+                context = split_brac[0].strip()
                 if  not (split_eq[0].strip() in attrs or split_brac[0].strip() in attrs): 
                         ii_skip = True                  
 
             if split_eq[0].strip() in attrs or split_brac[0].strip() in attrs: # include only if in attrs                
                 if line.find('= [\n') >= 0:
                     ii_list = True
-                if line.find('vpc_id') >= 0 and resource_type != 'aws_vpc': # replace with reference
-                    out += split_eq[0] + f'= aws_vpc.vpc0.id\n' #TODO unhard code this
+                if line.find('_id') >= 0 or ii_id: # Opportunity to replace id with reference
+                    if ii_list: # Sometimes the id's are in lists
+                        ii_id = True
+                        out += line
+                    else:
+                        out = self.check_for_ref(out,line,resource_name,attrs)                  
                 else:
                     out += line
                 
 
         self.file_str += out  
         self.write_file_str()  
+
+    def check_for_ref(self,out,line,resource_name,attrs=None):
+        """
+        Often a variable can be replaced by a reference to a resource's variables. 
+        Check to see if we should make that switch here
+
+        Inputs:
+        out  - string to be written to file
+        line - current line of tf show
+        resource_name - the current resource block the line is in
+
+        Outputs:
+        out - string to be written to file
+        """ 
+        ii_has_eq = line.find('=') >= 0
+        if ii_has_eq:
+            split_eq = line.split('=')
+            if attrs is not None:
+                if not split_eq[0].strip() in attrs: # Must be in attrs to be included
+                    return out
+
+        # Allow what we can reference
+        if not line.find('_id') >= 0: # This isn't a line that we can reference            
+            out += line
+            return out
+
+        # Pull id from line
+        ii_list   = not ii_has_eq
+        if ii_list: # We are inside a list of id's
+            id = line.split('"')[1]        
+        else:            
+            id = split_eq[1][2:-2] # indexing is to leave off the _" and \n             
+
+        if not id in self.resources.keys(): # We don't have a reference for this
+            out += line
+            return out
+               
+        # Find resrouce from id
+        ref = self.resources[id][0]             
+        ref_type = self.resources[id][1]
+            
+        if ref == resource_name: # within resource's own block, add the id verbatim
+            out += line
+        else: # outside of resource's own block, replace with reference
+            if ii_list:
+                out += f'{ref_type}.{ref}.id\n'   
+            else:
+                out += split_eq[0] + f'= {ref_type}.{ref}.id\n'
+
+        return out                    
+
 
     def write_file_str(self):
         """
