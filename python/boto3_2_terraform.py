@@ -140,9 +140,8 @@ def main():
             resource_type = name_table[jrec]
             local_name = resource_type + f'{j}'
             TF.resources[jid] = [local_name,resource_type]
-            if False:
-                print(f'Importing Terraform resource {jrec}...')
-                subprocess.run(["terraform","import",f"{resource_type}.{local_name}",f"{jid}"])
+            print(f'Importing Terraform resource {jrec}...')
+            subprocess.run(["terraform","import",f"{resource_type}.{local_name}",f"{jid}"])
 
         TF.file_str = PB.block_str + '}\n'
         TF.show2config()  
